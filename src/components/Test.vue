@@ -1,14 +1,18 @@
 <template>
-    <h4 @click="emitTest">
-        Test vue!
-    </h4>
+    <input @input="emitTest" :value="input"/>
 </template>
 
 <script>
 export default {
+    props: {
+        input: {
+            type: String,
+            default: 'hello',
+        }
+    },
     methods: {
-        emitTest(){
-            this.$emit('emittest', 'Hello!')
+        emitTest(event){
+            this.$emit('update:input', event.target.value)
         }
     }
 }
