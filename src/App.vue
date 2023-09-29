@@ -21,7 +21,7 @@
         </my-dialog>
 
         <post-list 
-            :posts="posts"
+            :posts="sortedPosts"
             @remove = 'removePost'
             v-if="!isPostLoading"
         />
@@ -41,12 +41,13 @@ import PostForm from '@/components/PostForm';
 import PostList from '@/components/PostList';
 import Test from '@/components/Test';
 import axios from 'axios';
+import { toHandlers } from 'vue';
 
 export default {
     components: {
     PostList, PostForm,
     Test
-},
+    },
     data() {
         return {
             posts: [],
@@ -56,6 +57,7 @@ export default {
             sortOptions: [
                 {value: 'title', name: 'По названию'},
                 {value: 'body', name: 'По описанию'},
+                {value: 'id', name: 'По дате'},
             ],
             sayHellos: 'hello',
         }
@@ -91,13 +93,16 @@ export default {
     mounted(){
         this.fetchFunc();
     },
-    watch: {
-        selectedSort(newValue) {
-            this.posts.sort((a, b) => {
-                return a[newValue]?.localeCompare(b[newValue])
-            })
+    computed: {
+        sortedPosts(){
+            if(this.selectedSort === 'id'){
+                return [...this.posts].sort((a, b) => {return a[this.selectedSort] - b[this.selectedSort]})
+            }
+            else{
+                return [...this.posts.sort((a, b) => {return a[this.selectedSort]?.localeCompare(b[this.selectedSort])})]
+            }
         }
-    }
+    },
 }
 </script>
 
