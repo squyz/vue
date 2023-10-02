@@ -2,6 +2,8 @@
     <div class="app">
         <h1>Страница с постами</h1>
 
+        <my-input v-model="searchQuery"/>
+
         <div class="app__btns">
             <my-button
                 @click="showDialog"
@@ -21,7 +23,7 @@
         </my-dialog>
 
         <post-list 
-            :posts="sortedPosts"
+            :posts="sortedAndSearchedPosts"
             @remove = 'removePost'
             v-if="!isPostLoading"
         />
@@ -33,6 +35,8 @@
         <test
             v-model:input="sayHellos"
         />
+
+        <div class="observer" ref="observer"></div>
     </div>
 </template>
 
@@ -41,7 +45,6 @@ import PostForm from '@/components/PostForm';
 import PostList from '@/components/PostList';
 import Test from '@/components/Test';
 import axios from 'axios';
-import { toHandlers } from 'vue';
 
 export default {
     components: {
@@ -54,6 +57,10 @@ export default {
             dialogVisible: false,
             isPostLoading: false,
             selectedSort: '',
+            searchQuery: '',
+            page: 1,
+            limit: 10,
+            totalPages: 1,
             sortOptions: [
                 {value: 'title', name: 'По названию'},
                 {value: 'body', name: 'По описанию'},
@@ -79,7 +86,13 @@ export default {
         async fetchFunc(){
             try{
                 this.isPostLoading = true;
-                const response = await axios.get('https://jsonplaceholder.typicode.com/posts?_limit=10');
+                const response = await axios.get('https://jsonplaceholder.typicode.com/posts?', {
+                    params: {
+                        _page: this.page,
+                        _limit: this.limit,
+                    }
+                });
+                this.totalPages = Math.ceil(response.headers['x-total-count'] / this.limit);
                 this.posts = response.data;
             }
             catch{
@@ -88,10 +101,39 @@ export default {
             finally{
                 this.isPostLoading = false;
             }
-        }
+        },
+
+        async loadMorePosts(){
+            this.page += 1;
+            try{
+                const response = await axios.get('https://jsonplaceholder.typicode.com/posts?', {
+                    params: {
+                        _page: this.page,
+                        _limit: this.limit,
+                    }
+                });
+                this.posts = [...this.posts, ...response.data];
+            }
+            catch{
+                alert('Ошибка')
+            }
+        },
     },
     mounted(){
         this.fetchFunc();
+
+        const options = {
+            rootMargin: "0px",
+            threshold: 1.0,
+        };
+        
+        const callback = entries => {
+            if(entries[0].isIntersecting && this.page < this.totalPages){
+                this.loadMorePosts();
+            }
+        }
+        const observer = new IntersectionObserver(callback, options);
+        observer.observe(this.$refs.observer)
     },
     computed: {
         sortedPosts(){
@@ -101,8 +143,13 @@ export default {
             else{
                 return [...this.posts.sort((a, b) => {return a[this.selectedSort]?.localeCompare(b[this.selectedSort])})]
             }
+        },
+        sortedAndSearchedPosts(){
+            return this.sortedPosts.filter(post => post.title.toLowerCase().includes(this.searchQuery.toLowerCase()))
         }
     },
+    watch: {
+    }
 }
 </script>
 
@@ -119,5 +166,22 @@ export default {
     margin-top: 12px;
     display: flex;
     justify-content: space-between;
+}
+.page__wrapper{
+    display: flex;
+    margin-top: 15px;
+}
+.page{
+    border: 1px solid black;
+    padding: 10px;
+}
+.current-page{
+    border: 2px solid teal;
+}
+
+.observer{
+    width: 100%;
+    height: 24px;
+    background-color: black;
 }
 </style>
